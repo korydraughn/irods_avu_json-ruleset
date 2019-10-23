@@ -60,7 +60,11 @@ namespace
             const auto entity_type = to_string(_entity_type);
             const auto path = to_string(_path_to_data_object);
 
-            json_t* root;
+            json_t* root = nullptr;
+
+            irods::at_scope_exit<std::function<void()>> free_json_root{[root] {
+                json_decref(root);
+            }};
 
             {
                 const auto json = read_data_object(*_rei->rsComm, path);
@@ -86,7 +90,7 @@ namespace
             //auto* json_string = json_dumps(root, JSON_COMPACT);
             auto* json_string = json_dumps(root, JSON_INDENT(4));
 
-            irods::at_scope_exit<std::function<void()>> free_memory{[json_string] {
+            irods::at_scope_exit<std::function<void()>> free_json_string{[json_string] {
                 std::free(json_string);
             }};
 
@@ -129,7 +133,7 @@ namespace
 } // anonymous namespace
 
 extern "C"
-irods::ms_table_entry* plugin_factory()
+auto plugin_factory() -> irods::ms_table_entry*
 {
     const char* name = "msiAtomicApplyMetadataOperations";
     return make_msi<msParam_t*, msParam_t*, msParam_t*>(name, msi_impl);
