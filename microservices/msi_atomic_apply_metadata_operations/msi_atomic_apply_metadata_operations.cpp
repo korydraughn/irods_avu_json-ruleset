@@ -9,6 +9,9 @@
 #define IRODS_IO_TRANSPORT_ENABLE_SERVER_SIDE_API
 #include "transport/default_transport.hpp"
 
+#define IRODS_FILESYSTEM_ENABLE_SERVER_SIDE_API
+#include "filesystem.hpp"
+
 #include "jansson.h"
 
 #include <functional>
@@ -57,7 +60,7 @@ namespace
             {
                 // Read the data object's contents into memory.
                 std::string json;
-                std::copy(std::istream_iterator<char>{in}, std::istream_iterator<char>{}, std::begin(json));
+                std::copy(std::istream_iterator<char>{in}, std::istream_iterator<char>{}, std::back_inserter(json));
 
                 json_error_t error;
                 root = json_loads(json.c_str(), 0, &error);
@@ -69,15 +72,16 @@ namespace
             }
 
             // Add the entity information to the JSON object.
-            if (json_object_set(root, "entity_name", json_string(entity_name.c_str())) != 0 ||
-                json_object_set(root, "entity_type", json_string(entity_type.c_str())) != 0)
+            if (json_object_set_new(root, "entity_name", json_string(entity_name.c_str())) != 0 ||
+                json_object_set_new(root, "entity_type", json_string(entity_type.c_str())) != 0)
             {
                 rodsLog(LOG_ERROR, "Failed to add entity information to the JSON object.");
                 return SYS_INTERNAL_ERR;
             }
 
             // Encode the JSON object into a string.
-            auto* json_string = json_dumps(root, JSON_COMPACT);
+            //auto* json_string = json_dumps(root, JSON_COMPACT);
+            auto* json_string = json_dumps(root, JSON_INDENT(4));
 
             irods::at_scope_exit<std::function<void()>> free_memory{[json_string] {
                 std::free(json_string);
@@ -87,11 +91,16 @@ namespace
                 rodsLog(LOG_ERROR, "Could not encode JSON object into string.");
                 return SYS_INTERNAL_ERR;
             }
-            
+
+#if 0
             // TODO Atomically apply all metadata operations to the data object.
-            //char* json_output;
-            //return rc_atomic_apply_metadata_operations(_rei->rsComm, json_string, &json_output);
+            char* json_output;
+            return rc_atomic_apply_metadata_operations(_rei->rsComm, json_string, &json_output);
+#else
+            rodsLog(LOG_NOTICE, "JSON DATA => %s", json_string);
+
             return 0;
+#endif
         }
         catch (const std::exception& e) {
             rodsLog(LOG_ERROR, e.what());
