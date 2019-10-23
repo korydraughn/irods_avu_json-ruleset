@@ -18,6 +18,9 @@ set(MSI_RELEASE_VERSION "1.0.0")
  # Specify iRODS version manually
 set(IRODS_VERSION "4.2.6")
 
+# Export file for YCM and other development plugins.
+set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
+
 # Set additional modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/CMakeModules")
 
@@ -55,7 +58,8 @@ set(CMAKE_CXX_COMPILER ${IRODS_EXTERNALS_FULLPATH_CLANG}/bin/clang++)
 project(irods-microservices C CXX)
 
 # Check installed iRODS version
-find_package(IRODS ${IRODS_VERSION} EXACT REQUIRED)
+#find_package(IRODS ${IRODS_VERSION} EXACT REQUIRED)
+find_package(IRODS REQUIRED)
 message(STATUS "Building microservices version ${MSI_RELEASE_VERSION} for irods-server version ${IRODS_VERSION}")
 
 # Include the header files into the project
@@ -68,18 +72,21 @@ include_directories("/usr/include/irods")
 
 # Generate the shared Library (= binary) from the source code
 # Note: unlike an Executable, a library does not contain a main method. It just contains the classes
-add_library(msi_add_avu               SHARED msi_add_avu/msi_add_avu.cpp)
-add_library(msi_rmw_avu               SHARED msi_rmw_avu/msi_rmw_avu.cpp)
+add_library(msi_add_avu SHARED msi_add_avu/msi_add_avu.cpp)
+add_library(msi_rmw_avu SHARED msi_rmw_avu/msi_rmw_avu.cpp)
+add_library(msi_atomic_apply_metadata_operations SHARED msi_atomic_apply_metadata_operations/msi_atomic_apply_metadata_operations.cpp)
 
 # Link the generated library to dependency libraries
-target_link_libraries(msi_add_avu             LINK_PUBLIC ${Boost_LIBRARIES})
-target_link_libraries(msi_rmw_avu             LINK_PUBLIC ${Boost_LIBRARIES})
+target_link_libraries(msi_add_avu LINK_PUBLIC ${Boost_LIBRARIES})
+target_link_libraries(msi_rmw_avu LINK_PUBLIC ${Boost_LIBRARIES})
+target_link_libraries(msi_atomic_apply_metadata_operations LINK_PUBLIC ${Boost_LIBRARIES})
 
 # Set the location for library installation
 install(CODE "MESSAGE(\"Installing microservices to iRODS plugins folder...\")")
 install(TARGETS
         msi_add_avu
         msi_rmw_avu
+        msi_atomic_apply_metadata_operations
         DESTINATION
         /usr/lib/irods/plugins/microservices)
 
