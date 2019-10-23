@@ -99,6 +99,8 @@ namespace
                 return SYS_INTERNAL_ERR;
             }
 
+            // TODO Convert JSON to AVU metadata using converter.
+
 #if 0
             // TODO Atomically apply all metadata operations to the data object.
             char* json_output;
