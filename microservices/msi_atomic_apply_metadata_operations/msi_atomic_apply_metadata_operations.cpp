@@ -9,9 +9,6 @@
 #define IRODS_IO_TRANSPORT_ENABLE_SERVER_SIDE_API
 #include "transport/default_transport.hpp"
 
-#define IRODS_FILESYSTEM_ENABLE_SERVER_SIDE_API
-#include "filesystem.hpp"
-
 #include "jansson.h"
 
 #include <functional>
