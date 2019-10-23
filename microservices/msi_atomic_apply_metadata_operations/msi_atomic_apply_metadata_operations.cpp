@@ -25,10 +25,29 @@ namespace
         const auto* s = parseMspForStr(_p);
 
         if (!s) {
-            throw SYS_INVALID_INPUT_PARAM;
+            throw static_cast<int>(SYS_INVALID_INPUT_PARAM);
         }
 
         return s;
+    }
+
+    auto read_data_object(rsComm_t& _comm, const std::string& _path) -> std::string
+    {
+        using irods::experimental::io::idstream;
+        using irods::experimental::io::server::default_transport;
+
+        default_transport tp{_comm};
+        idstream in{tp, _path};
+
+        if (!in) {
+            rodsLog(LOG_ERROR, "Failed to open data object for reading [data object => %s].", _path.c_str());
+            throw static_cast<int>(FILE_OPEN_ERR);
+        }
+
+        std::string json;
+        std::copy(std::istream_iterator<char>{in}, std::istream_iterator<char>{}, std::back_inserter(json));
+
+        return json;
     }
 
     auto msi_impl(msParam_t* _entity_name,
@@ -41,29 +60,16 @@ namespace
             const auto entity_type = to_string(_entity_type);
             const auto path = to_string(_path_to_data_object);
 
-            using irods::experimental::io::idstream;
-            using irods::experimental::io::server::default_transport;
-
-            default_transport tp{*_rei->rsComm};
-            idstream in{tp, path};
-
-            if (!in) {
-                rodsLog(LOG_ERROR, "Could not open data object [%s] for reading.", path.c_str());
-                return FILE_OPEN_ERR;
-            }
-
             json_t* root;
 
             {
-                // Read the data object's contents into memory.
-                std::string json;
-                std::copy(std::istream_iterator<char>{in}, std::istream_iterator<char>{}, std::back_inserter(json));
+                const auto json = read_data_object(*_rei->rsComm, path);
 
                 json_error_t error;
                 root = json_loads(json.c_str(), 0, &error);
 
                 if (!root || !json_is_object(root)) {
-                    rodsLog(LOG_ERROR, "Could not parse string into JSON [json_parse_error => %s].", error.text);
+                    rodsLog(LOG_ERROR, "Failed to parse string into JSON [json parse error => %s].", error.text);
                     return SYS_INVALID_INPUT_PARAM;
                 }
             }
@@ -85,7 +91,7 @@ namespace
             }};
 
             if (!json_string) {
-                rodsLog(LOG_ERROR, "Could not encode JSON object into string.");
+                rodsLog(LOG_ERROR, "Failed to encode JSON object as string.");
                 return SYS_INTERNAL_ERR;
             }
 
@@ -104,7 +110,7 @@ namespace
             return SYS_INTERNAL_ERR;
         }
         catch (const int error_code) {
-            rodsLog(LOG_ERROR, "Could not convert microservice argument to string.");
+            rodsLog(LOG_ERROR, "Failed to convert microservice argument to string.");
             return error_code;
         }
         catch (...) {
