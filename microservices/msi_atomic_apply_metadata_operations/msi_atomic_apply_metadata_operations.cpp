@@ -116,7 +116,7 @@ namespace
             return SYS_INTERNAL_ERR;
         }
         catch (const int error_code) {
-            rodsLog(LOG_ERROR, "Failed to convert microservice argument to string.");
+            rodsLog(LOG_ERROR, "Microservice error.");
             return error_code;
         }
         catch (...) {
